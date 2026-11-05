@@ -1,0 +1,52 @@
+name: Render What-If Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      episode:
+        description: 'Episode slug (copy-paste or rewind)'
+        required: true
+        default: 'copy-paste'
+      format:
+        description: 'Video format (vertical, landscape, square)'
+        required: true
+        default: 'vertical'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js & Python
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python Packages & Unzip Studio
+        run: |
+          pip install numpy Pillow
+          unzip -q -o "*.zip"
+
+      - name: Install Remotion Studio Dependencies
+        working-directory: what-if-video-plugin/studio
+        run: npm install
+
+      - name: Render Video & Master Audio
+        working-directory: what-if-video-plugin/studio
+        run: |
+          node ../scripts/stills.mjs ${{ inputs.episode }}
+          python3 ../scripts/board.py ${{ inputs.episode }}
+          python3 ../scripts/render_parts.py ${{ inputs.episode }} --chunk 300 --concurrency 1
+          python3 ../scripts/master.py ${{ inputs.episode }} --skip-render
+          python3 ../scripts/deliver.py ${{ inputs.episode }} --format ${{ inputs.format }}
+
+      - name: Upload Finished 1080p MP4
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.episode }}-${{ inputs.format }}-video
+          path: |
+            what-if-video-plugin/studio/out/${{ inputs.episode }}/*-1080p.mp4
+            what-if-video-plugin/studio/out/${{ inputs.episode }}/storyboard.jpg
+            
