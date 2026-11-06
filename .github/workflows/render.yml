@@ -24,6 +24,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup FFmpeg (Fast 5s Install)
+        uses: FedericoCarboni/setup-ffmpeg@v3
+
       - name: Install Python Packages & Unzip Studio
         run: |
           pip install numpy Pillow
